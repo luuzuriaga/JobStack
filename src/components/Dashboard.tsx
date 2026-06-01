@@ -402,15 +402,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onSignOutDemo }) => 
         <div className="max-w-[98%] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           
           {/* Logo */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-500 flex items-center justify-center shadow-md shadow-violet-500/10 border border-violet-400/10">
+          <button
+            onClick={() => window.location.reload()}
+            className="flex items-center gap-2.5 hover:opacity-90 active:scale-[0.98] transition-all focus:outline-none text-left cursor-pointer group"
+            title="Refrescar página"
+          >
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-500 flex items-center justify-center shadow-md shadow-violet-500/10 border border-violet-400/10 group-hover:scale-105 transition-transform duration-200">
               <Sparkles className="w-4.5 h-4.5 text-white" />
             </div>
             <div>
               <span className="text-md font-bold tracking-tight text-white block">JobStack</span>
               <span className="text-[10px] text-slate-400 block -mt-1 font-medium uppercase tracking-wider">Funnel Tracker</span>
             </div>
-          </div>
+          </button>
 
           {/* User & Sign Out */}
           <div className="flex items-center gap-4">
