@@ -99,3 +99,15 @@ export interface Application {
   estados?: Estado;
 }
 
+export interface Portal {
+  id: string;
+  created_at?: string;
+  user_id: string;
+  company_name: string;
+  rubro?: string | null;
+  link?: string | null;
+  correo_registro?: string | null;
+  fecha: string;
+}
+
+

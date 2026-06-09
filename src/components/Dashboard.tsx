@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import type { Application, EstadoFunnel, TipoModalidad } from '../types';
+import type { Application, EstadoFunnel, TipoModalidad, Portal } from '../types';
 import { StatCards } from './StatCards';
 import { JobTable } from './JobTable';
 import { KanbanBoard } from './KanbanBoard';
 import { CalendarView } from './CalendarView';
 import { HomeView } from './HomeView';
 import { AnalyticsView } from './AnalyticsView';
+import { PortalesView } from './PortalesView';
 import { Modal } from './ui/Modal';
 import { JobModal } from './JobModal';
 import { CsvImportModal } from './CsvImportModal';
@@ -24,6 +25,8 @@ interface DashboardProps {
 export const Dashboard: React.FC<DashboardProps> = ({ user, onSignOutDemo }) => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
+  const [portales, setPortales] = useState<Portal[]>([]);
+  const [portalesLoading, setPortalesLoading] = useState(false);
   
   // Estados de Filtros y Búsqueda
   const [searchTerm, setSearchTerm] = useState('');
@@ -41,16 +44,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onSignOutDemo }) => 
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   
-  const getInitialView = (): 'home' | 'table' | 'kanban' | 'calendar' | 'analytics' => {
+  const getInitialView = (): 'home' | 'table' | 'kanban' | 'calendar' | 'analytics' | 'portales' => {
     const path = window.location.pathname;
     if (path === '/lista') return 'table';
     if (path === '/kanban') return 'kanban';
     if (path === '/calendario') return 'calendar';
     if (path === '/metricas') return 'analytics';
+    if (path === '/portales') return 'portales';
     return 'home';
   };
 
-  const [currentView, setCurrentView] = useState<'home' | 'table' | 'kanban' | 'calendar' | 'analytics'>(getInitialView());
+  const [currentView, setCurrentView] = useState<'home' | 'table' | 'kanban' | 'calendar' | 'analytics' | 'portales'>(getInitialView());
 
   useEffect(() => {
     const handlePopState = () => {
@@ -59,6 +63,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onSignOutDemo }) => 
       else if (path === '/kanban') setCurrentView('kanban');
       else if (path === '/calendario') setCurrentView('calendar');
       else if (path === '/metricas') setCurrentView('analytics');
+      else if (path === '/portales') setCurrentView('portales');
       else setCurrentView('home');
     };
 
@@ -66,12 +71,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onSignOutDemo }) => 
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const handleNavigate = (view: 'home' | 'table' | 'kanban' | 'calendar' | 'analytics') => {
+  const handleNavigate = (view: 'home' | 'table' | 'kanban' | 'calendar' | 'analytics' | 'portales') => {
     let path = '/';
     if (view === 'table') path = '/lista';
     else if (view === 'kanban') path = '/kanban';
     else if (view === 'calendar') path = '/calendario';
     else if (view === 'analytics') path = '/metricas';
+    else if (view === 'portales') path = '/portales';
     
     window.history.pushState({}, '', path);
     setCurrentView(view);
@@ -248,9 +254,149 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onSignOutDemo }) => 
     }
   }, [user.id]);
 
+  // Fetch de portales de la base de datos o LocalStorage
+  const fetchPortales = useCallback(async () => {
+    setPortalesLoading(true);
+    try {
+      if (user.id === 'demo-user-id') {
+        const localData = localStorage.getItem('jobstack_demo_portales');
+        if (localData) {
+          setPortales(JSON.parse(localData));
+        } else {
+          const initialPortales: Portal[] = [
+            {
+              id: 'demo-portal-1',
+              user_id: 'demo-user-id',
+              company_name: 'LinkedIn',
+              rubro: 'Red Profesional',
+              link: 'https://linkedin.com',
+              correo_registro: 'lucero@example.com',
+              fecha: new Date(Date.now() - 86400000 * 10).toISOString().split('T')[0]
+            },
+            {
+              id: 'demo-portal-2',
+              user_id: 'demo-user-id',
+              company_name: 'Google Careers',
+              rubro: 'Tecnología',
+              link: 'https://careers.google.com',
+              correo_registro: 'lucero.dev@google.com',
+              fecha: new Date(Date.now() - 86400000 * 5).toISOString().split('T')[0]
+            },
+            {
+              id: 'demo-portal-3',
+              user_id: 'demo-user-id',
+              company_name: 'Globant Careers',
+              rubro: 'Tecnología',
+              link: 'https://jobs.globant.com',
+              correo_registro: 'lucero@example.com',
+              fecha: new Date().toISOString().split('T')[0]
+            }
+          ];
+          localStorage.setItem('jobstack_demo_portales', JSON.stringify(initialPortales));
+          setPortales(initialPortales);
+        }
+        setPortalesLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('portales')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('fecha', { ascending: false });
+
+      if (error) throw error;
+      setPortales((data || []).map((item: any) => ({ ...item, id: String(item.id) })));
+    } catch (err) {
+      console.error('Error cargando portales:', err);
+    } finally {
+      setPortalesLoading(false);
+    }
+  }, [user.id]);
+
+  // Guardar Portal (Agregar o Editar)
+  const handleSavePortal = async (portalData: Omit<Portal, 'id' | 'created_at' | 'user_id'> & { id?: string }) => {
+    try {
+      const payload = {
+        user_id: user.id,
+        company_name: portalData.company_name,
+        rubro: portalData.rubro,
+        link: portalData.link,
+        correo_registro: portalData.correo_registro,
+        fecha: portalData.fecha
+      };
+
+      if (user.id === 'demo-user-id') {
+        const localData = localStorage.getItem('jobstack_demo_portales');
+        let list: Portal[] = localData ? JSON.parse(localData) : [];
+
+        if (portalData.id) {
+          list = list.map(p => p.id === portalData.id ? { ...p, ...payload } : p);
+        } else {
+          const newPortal: Portal = {
+            id: Math.random().toString(36).substring(2, 9),
+            created_at: new Date().toISOString(),
+            ...payload
+          };
+          list.unshift(newPortal);
+        }
+
+        localStorage.setItem('jobstack_demo_portales', JSON.stringify(list));
+        setPortales(list);
+        return { success: true };
+      }
+
+      if (portalData.id) {
+        const { error } = await supabase
+          .from('portales')
+          .update(payload)
+          .eq('id', portalData.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('portales')
+          .insert([payload]);
+        if (error) throw error;
+      }
+
+      fetchPortales();
+      return { success: true };
+    } catch (err: any) {
+      console.error('Error al guardar portal:', err);
+      return { success: false, error: err.message || String(err) };
+    }
+  };
+
+  // Eliminar Portal
+  const handleDeletePortal = async (id: string) => {
+    try {
+      if (user.id === 'demo-user-id') {
+        const localData = localStorage.getItem('jobstack_demo_portales');
+        let list: Portal[] = localData ? JSON.parse(localData) : [];
+        list = list.filter(p => p.id !== id);
+        localStorage.setItem('jobstack_demo_portales', JSON.stringify(list));
+        setPortales(list);
+        return true;
+      }
+
+      const { error } = await supabase
+        .from('portales')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      fetchPortales();
+      return true;
+    } catch (err) {
+      console.error('Error al eliminar portal:', err);
+      return false;
+    }
+  };
+
   useEffect(() => {
     fetchApplications();
-  }, [fetchApplications]);
+    fetchPortales();
+  }, [fetchApplications, fetchPortales]);
 
   const handleSignOut = () => {
     setShowSignOutConfirm(true);
@@ -441,6 +587,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onSignOutDemo }) => 
             onOpenAddModal={handleOpenAddModal}
             onOpenImportModal={() => setIsImportOpen(true)}
             applications={applications}
+            portales={portales}
             userEmail={user.email || null}
           />
         )}
@@ -633,6 +780,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onSignOutDemo }) => 
           <AnalyticsView
             applications={applications}
             onNavigate={handleNavigate}
+          />
+        )}
+
+        {currentView === 'portales' && (
+          <PortalesView
+            applications={applications}
+            portales={portales}
+            onSavePortal={handleSavePortal}
+            onDeletePortal={handleDeletePortal}
+            onNavigate={handleNavigate}
+            loading={portalesLoading}
           />
         )}
 

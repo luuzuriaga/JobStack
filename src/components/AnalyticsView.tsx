@@ -3,7 +3,7 @@ import type { Application } from '../types';
 import { 
   ArrowLeft, BarChart2, Briefcase, Building, CalendarClock, 
   CheckCircle2, Percent, ShieldAlert, Sparkles, Star, Target, 
-  TrendingUp, Trophy, Users
+  TrendingUp, Trophy
 } from 'lucide-react';
 
 interface AnalyticsViewProps {
@@ -104,21 +104,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ applications, onNa
     }));
   }, [applications, totalApps]);
 
-  // 4. Perfil del Aplicante
-  const profileStats = useMemo(() => {
-    let bootcamp = 0;
-    let university = 0;
-    applications.forEach(app => {
-      const p = app.perfil || '';
-      if (p.toLowerCase().includes('but') || p.toLowerCase().includes('boot')) bootcamp++;
-      else university++;
-    });
 
-    return [
-      { name: 'Butcamp', count: bootcamp, percentage: totalApps > 0 ? Math.round((bootcamp / totalApps) * 100) : 0, color: 'from-rose-500 to-pink-500' },
-      { name: 'Universidad', count: university, percentage: totalApps > 0 ? Math.round((university / totalApps) * 100) : 0, color: 'from-emerald-500 to-teal-500' }
-    ];
-  }, [applications, totalApps]);
 
   // 5. Tasa de respuesta (CV visto y Vacante activa)
   const responseStats = useMemo(() => {
@@ -305,7 +291,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ applications, onNa
       </section>
 
       {/* Grid de Secciones de Distribución */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* Distribución por Portales */}
         <div className="glass-panel rounded-3xl p-5 border border-slate-850 shadow-xl flex flex-col justify-between">
@@ -332,7 +318,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ applications, onNa
                           <span className={`w-1.5 h-1.5 rounded-full ${portalColor}`} />
                           {portal.name}
                         </span>
-                        <span className="text-slate-400 font-bold">{portal.count} ({portal.percentage}%)</span>
+                        <span className="text-slate-450 font-bold">{portal.count} ({portal.percentage}%)</span>
                       </div>
                       <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full ${portalColor}`} style={{ width: `${portal.percentage}%` }} />
@@ -370,40 +356,6 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ applications, onNa
                     </div>
                   </div>
                 ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Perfil del Candidato */}
-        <div className="glass-panel rounded-3xl p-5 border border-slate-850 shadow-xl flex flex-col justify-between">
-          <div>
-            <h4 className="text-sm font-bold text-white border-b border-slate-900 pb-3 mb-4 flex items-center gap-2">
-              <Users className="w-4 h-4 text-rose-450" /> Perfil de Reclutamiento
-            </h4>
-            
-            {totalApps === 0 ? (
-              <p className="text-xs text-slate-500 italic text-center py-10">Sin datos de perfiles</p>
-            ) : (
-              <div className="space-y-5">
-                <div className="space-y-4">
-                  {profileStats.map((prof, idx) => (
-                    <div key={idx} className="space-y-1.5">
-                      <div className="flex justify-between items-center text-xs font-semibold">
-                        <span className="text-slate-350">{prof.name}</span>
-                        <span className="text-slate-200 font-bold bg-slate-900 px-2 py-0.5 border border-slate-850 rounded-md">
-                          {prof.count} ({prof.percentage}%)
-                        </span>
-                      </div>
-                      <div className="w-full h-3 bg-slate-950 rounded-lg overflow-hidden p-[1px]">
-                        <div className={`h-full rounded-md bg-gradient-to-r ${prof.color}`} style={{ width: `${prof.percentage}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="p-3 bg-slate-950/40 border border-slate-900/60 rounded-2xl text-[10px] text-slate-500 font-medium leading-relaxed">
-                  💡 Configura el perfil para diferenciar tus postulaciones (Butcamp vs Universidad) y optimizar el feedback específico por tipo de reclutador.
-                </div>
               </div>
             )}
           </div>
